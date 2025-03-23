@@ -9,7 +9,8 @@ enum MapViewBuilder {
     
     static func build() -> MapView {
         let locationManager = LocationManager()
-        let locationRepository = LocationRepository(locationManager)
+        let locationStorageManager = LocationStorageManager.shared
+        let locationRepository = LocationRepository(locationManager, locationStorageManager)
         let viewModel = MapViewModel(locationRepository)
         locationRepository.delegate = viewModel
         return MapView(viewModel: viewModel)

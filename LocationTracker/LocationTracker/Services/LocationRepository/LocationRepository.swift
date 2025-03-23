@@ -12,12 +12,25 @@ final class LocationRepository {
     weak var delegate: LocationRepositoryDelegate?
     
     private var locationManager: LocationManagerProtocol
+    private let locationStorageManager: LocationStorageProtocol
     
     private let geocoder = CLGeocoder()
     
-    init(_ locationManager: LocationManagerProtocol) {
+    init(
+        _ locationManager: LocationManagerProtocol,
+        _ locationStorageManager: LocationStorageProtocol
+    ) {
         self.locationManager = locationManager
+        self.locationStorageManager = locationStorageManager
+        
         self.locationManager.delegate = self
+    }
+    
+    private func saveLocation(_ location: LocationModel) async {
+        var locations = await getSavedLocations()
+        locations.append(location)
+        
+        await locationStorageManager.saveLocation(location)
     }
 }
 
@@ -51,6 +64,14 @@ extension LocationRepository: LocationRepositoryProtocol {
             completion(address)
         }
     }
+    
+    func getSavedLocations() async -> [LocationModel] {
+        return await locationStorageManager.fetchLocations()
+    }
+    
+    func resetLocations() async {
+        await locationStorageManager.deleteLocations()
+    }
 }
 
 // MARK: - LocationManagerDelegate
@@ -67,7 +88,10 @@ extension LocationRepository: LocationManagerDelegate {
                 address: address
             )
             
-            self.delegate?.locationRepository(self, didUpdateLocation: locationModel)
+            Task {
+                await self.saveLocation(locationModel)
+                self.delegate?.locationRepository(self, didUpdateLocation: locationModel)
+            }
         }
     }
     
