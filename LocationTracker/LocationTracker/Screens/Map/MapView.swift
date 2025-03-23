@@ -58,15 +58,29 @@ final class MapView: BaseViewController {
         super.viewDidLoad()
         view.backgroundColor = .white
         
+        addObserver()
         setupMapView()
         setupButtons()
         updateTrackingButton()
         bindViewModel()
     }
+    
+    @objc private func appDidBecomeActive() {
+        viewModel.checkAuthorizationStatus()
+    }
 }
 
 // MARK: - Setup UI
 private extension MapView {
+    
+    func addObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidBecomeActive),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+    }
     
     func bindViewModel() {
         viewModel.changeHandler = { [weak self] change in
@@ -84,8 +98,8 @@ private extension MapView {
             updateTrackingButton(status)
         case .didLocationUpdate(let location):
             didLocationUpdate(location: location)
-        case .didAuthorizationStatusChange(let status):
-            didAuthorizationStatusChange(status)
+        case .handleAuthorizationStatus(let status):
+            handleAuthorizationStatus(status)
         case .alert(let title, let message, let actions):
             showAlert(with: title, message: message, actions: actions)
         }
@@ -192,16 +206,28 @@ private extension MapView {
         markers.append(marker)
     }
     
-    func didAuthorizationStatusChange(_ status: CLAuthorizationStatus) {
+    func handleAuthorizationStatus(_ status: CLAuthorizationStatus) {
         DispatchQueue.main.async {
             switch status {
             case .denied, .restricted:
-                // TODO: Show bottomsheet
-                break
+                self.showAutorizationView()
             default:
-                break
+                if self.presentedViewController is BottomSheetViewController {
+                    self.presentedViewController?.dismiss(animated: false)
+                }
             }
         }
+    }
+    
+    func showAutorizationView() {
+        let contentView = LocationPermissionView()
+        let bottomSheet = BottomSheetViewController(contentView: contentView)
+        
+        if let sheet = bottomSheet.sheetPresentationController {
+            sheet.detents = [.large()]
+        }
+        bottomSheet.isModalInPresentation = true
+        self.present(bottomSheet, animated: true)
     }
     
     func clearMap() {

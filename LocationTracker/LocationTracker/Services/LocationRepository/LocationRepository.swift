@@ -36,6 +36,11 @@ final class LocationRepository {
 
 // MARK: - LocationRepositoryProtocol
 extension LocationRepository: LocationRepositoryProtocol {
+    
+    var authorizationStatus: CLAuthorizationStatus {
+        locationManager.authorizationStatus
+    }
+    
     func startTracking() {
         locationManager.startUpdatingLocation()
     }
