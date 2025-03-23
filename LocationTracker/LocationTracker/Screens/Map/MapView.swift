@@ -102,6 +102,7 @@ private extension MapView {
         mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         mapView.isMyLocationEnabled = true
         mapView.settings.myLocationButton = true
+        mapView.delegate = self
         view.addSubview(mapView)
     }
     
@@ -133,6 +134,17 @@ private extension MapView {
     
     @objc func resetButtonTapped() {
         viewModel.didResetButtonTap()
+    }
+}
+
+// MARK: - GMSMapViewDelegate
+extension MapView: GMSMapViewDelegate {
+    
+    func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker) -> Bool {
+        if let location = marker.userData as? LocationModel {
+            showDetail(of: location)
+        }
+        return true
     }
 }
 
