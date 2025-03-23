@@ -14,11 +14,15 @@ final class MapViewModel {
         case presentation([LocationModel])
         case didTrackingStatusChange(status: Bool)
         case didLocationUpdate(location: LocationModel)
-        case didAuthorizationStatusChange(status: CLAuthorizationStatus)
+        case handleAuthorizationStatus(status: CLAuthorizationStatus)
         case alert(title: String, message: String, actions: [AlertAction]? = nil)
     }
     
-    var changeHandler: ((Change) -> Void)?
+    var changeHandler: ((Change) -> Void)? {
+        didSet {
+            checkAuthorizationStatus()
+        }
+    }
     
     private(set) var locations: [LocationModel] = []
     private var isTracking: Bool = false
@@ -58,10 +62,16 @@ extension MapViewModel {
             ]
         ))
     }
+    
+    func checkAuthorizationStatus() {
+        let status = locationRepository.authorizationStatus
+        changeHandler?(.handleAuthorizationStatus(status: status))
+    }
 }
 
 // MARK: - Private Methods
 private extension MapViewModel {
+    
     func startTracking() {
         locationRepository.startTracking()
         isTracking = true
@@ -102,6 +112,6 @@ extension MapViewModel: LocationRepositoryDelegate {
     }
     
     func locationRepository(_ repository: LocationRepository, didChangeAuthorization status: CLAuthorizationStatus) {
-        changeHandler?(.didAuthorizationStatusChange(status: status))
+        changeHandler?(.handleAuthorizationStatus(status: status))
     }
 }

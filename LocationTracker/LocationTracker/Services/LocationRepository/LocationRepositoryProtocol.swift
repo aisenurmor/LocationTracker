@@ -8,6 +8,8 @@
 import CoreLocation
 
 protocol LocationRepositoryProtocol {
+    var authorizationStatus: CLAuthorizationStatus { get }
+    
     func startTracking()
     func stopTracking()
     func requestLocationPermission()
