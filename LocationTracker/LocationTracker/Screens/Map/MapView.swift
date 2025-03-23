@@ -78,9 +78,8 @@ private extension MapView {
     
     func applyChange(_ change: MapViewModel.Change) {
         switch change {
-        case .presentation(let presentation):
-            // TODO: Show recent locations
-            break
+        case .presentation(let locations):
+            loadSavedLocations(locations)
         case .didTrackingStatusChange(let status):
             updateTrackingButton(status)
         case .didLocationUpdate(let location):
@@ -140,18 +139,37 @@ private extension MapView {
 // MARK: - Private Methods
 private extension MapView {
     
+    func loadSavedLocations(_ locations: [LocationModel]) {
+        guard !locations.isEmpty else {
+            clearMap()
+            return
+        }
+        
+        clearMap()
+        locations.forEach { location in
+            addMarkerForLocation(location)
+        }
+        
+        if let lastLocation = locations.last {
+            moveCamera(to: lastLocation.coordinate)
+        }
+    }
+    
     func didLocationUpdate(location: LocationModel) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.addMarkerForLocation(location)
-            
-            let camera = GMSCameraPosition.camera(
-                withLatitude: location.coordinate.latitude,
-                longitude: location.coordinate.longitude,
-                zoom: 15.0
-            )
-            self.mapView.animate(to: camera)
+            addMarkerForLocation(location)
+            moveCamera(to: location.coordinate)
         }
+    }
+    
+    func moveCamera(to coordinate: CLLocationCoordinate2D) {
+        let camera = GMSCameraPosition.camera(
+            withLatitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            zoom: 15.0
+        )
+        self.mapView.animate(to: camera)
     }
     
     func addMarkerForLocation(_ location: LocationModel) {
@@ -160,16 +178,6 @@ private extension MapView {
         marker.map = mapView
         marker.userData = location
         markers.append(marker)
-        
-        if markers.count > 1 {
-            let path = GMSMutablePath()
-            markers.forEach { path.add($0.position) }
-            
-            let polyline = GMSPolyline(path: path)
-            polyline.strokeColor = .blue
-            polyline.strokeWidth = 3.0
-            polyline.map = mapView
-        }
     }
     
     func didAuthorizationStatusChange(_ status: CLAuthorizationStatus) {
@@ -182,5 +190,10 @@ private extension MapView {
                 break
             }
         }
+    }
+    
+    func clearMap() {
+        mapView.clear()
+        markers.removeAll()
     }
 }

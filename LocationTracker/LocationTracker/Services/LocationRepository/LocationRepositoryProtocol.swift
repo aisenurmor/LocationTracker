@@ -12,4 +12,6 @@ protocol LocationRepositoryProtocol {
     func stopTracking()
     func requestLocationPermission()
     func reverseGeocode(location: CLLocation, completion: @escaping (String?) -> Void)
+    func getSavedLocations() async -> [LocationModel]
+    func resetLocations() async
 }

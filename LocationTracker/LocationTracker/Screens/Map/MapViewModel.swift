@@ -27,6 +27,10 @@ final class MapViewModel {
     
     init(_ locationRepository: LocationRepositoryProtocol) {
         self.locationRepository = locationRepository
+        
+        Task {
+            await loadLocations()
+        }
     }
 }
 
@@ -46,14 +50,17 @@ extension MapViewModel {
             message: "Tüm konum geçmişiniz silinecek. Devam etmek istiyor musunuz?",
             actions: [
                 .init(title: "İptal", style: .cancel),
-                .init(title: "Sil", style: .destructive, handler: {
-                    // TODO: Add action
+                .init(title: "Sil", style: .destructive, handler: { [weak self] in
+                    Task {
+                        await self?.resetLocations()
+                    }
                 })
             ]
         ))
     }
 }
 
+// MARK: - Private Methods
 private extension MapViewModel {
     func startTracking() {
         locationRepository.startTracking()
@@ -63,6 +70,20 @@ private extension MapViewModel {
     func stopTracking() {
         locationRepository.stopTracking()
         isTracking = false
+    }
+    
+    func loadLocations() async {
+        let locations = await locationRepository.getSavedLocations()
+        
+        await MainActor.run {
+            self.locations = locations
+            self.changeHandler?(.presentation(locations))
+        }
+    }
+    
+    func resetLocations() async {
+        await locationRepository.resetLocations()
+        await loadLocations()
     }
 }
 
