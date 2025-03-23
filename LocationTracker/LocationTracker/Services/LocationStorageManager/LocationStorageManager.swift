@@ -33,17 +33,22 @@ actor LocationStorageManager {
 extension LocationStorageManager: LocationStorageProtocol {
     
     func saveLocation(_ location: LocationModel) async {
-        let context = persistentContainer.viewContext
-        let dataModel = LocationDataModel(context: context)
-        dataModel.latitude = location.coordinate.latitude
-        dataModel.longitude = location.coordinate.longitude
-        dataModel.timestamp = location.timestamp
-        dataModel.address = location.address
+        let context = persistentContainer.newBackgroundContext()
+        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
         
-        do {
-            try context.save()
-        } catch {
-            debugPrint("Failed to save location: \(error)")
+        await context.perform {
+            let dataModel = LocationDataModel(context: context)
+            dataModel.latitude = location.coordinate.latitude
+            dataModel.longitude = location.coordinate.longitude
+            dataModel.timestamp = location.timestamp
+            dataModel.address = location.address
+            
+            do {
+                try context.save()
+                debugPrint("Location was saved successfully")
+            } catch {
+                debugPrint("Failed to save location: \(error)")
+            }
         }
     }
     
