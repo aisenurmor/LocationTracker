@@ -8,7 +8,7 @@
 import GoogleMaps
 import UIKit
 
-final class MapView: UIViewController {
+final class MapView: BaseViewController {
     
     private enum Constants {
         static let buttonHeight: CGFloat = 50
@@ -38,6 +38,7 @@ final class MapView: UIViewController {
     }()
     
     private var mapView: GMSMapView!
+    private var markers: [GMSMarker] = []
     
     // MARK: - Properties
     private let viewModel: MapViewModel
@@ -60,11 +61,36 @@ final class MapView: UIViewController {
         setupMapView()
         setupButtons()
         updateTrackingButton()
+        bindViewModel()
     }
 }
 
 // MARK: - Setup UI
 private extension MapView {
+    
+    func bindViewModel() {
+        viewModel.changeHandler = { [weak self] change in
+            DispatchQueue.main.async {
+                self?.applyChange(change)
+            }
+        }
+    }
+    
+    func applyChange(_ change: MapViewModel.Change) {
+        switch change {
+        case .presentation(let presentation):
+            // TODO: Show recent locations
+            break
+        case .didTrackingStatusChange(let status):
+            updateTrackingButton(status)
+        case .didLocationUpdate(let location):
+            didLocationUpdate(location: location)
+        case .didAuthorizationStatusChange(let status):
+            didAuthorizationStatusChange(status)
+        case .alert(let title, let message, let actions):
+            showAlert(with: title, message: message, actions: actions)
+        }
+    }
     
     func setupMapView() {
         let camera = GMSCameraPosition.camera(withLatitude: 0, longitude: 0, zoom: 1)
@@ -96,27 +122,65 @@ private extension MapView {
         ])
     }
     
-    func updateTrackingButton() {
-        let buttonImage = UIImage(systemName: viewModel.isTracking ? "pause.fill" : "play.fill")
+    func updateTrackingButton(_ isTracking: Bool = false) {
+        let buttonImage = UIImage(systemName: isTracking ? "pause.fill" : "play.fill")
         trackingButton.setImage(buttonImage, for: .normal)
-        trackingButton.backgroundColor = viewModel.isTracking ? .systemBlue.withAlphaComponent(0.6) : .systemBlue
+        trackingButton.backgroundColor = isTracking ? .systemBlue.withAlphaComponent(0.6) : .systemBlue
     }
     
-    @objc private func trackingButtonTapped() {
-        viewModel.trackingButtonTapped()
-        updateTrackingButton()
+    @objc func trackingButtonTapped() {
+        viewModel.didTrackingButtonTap()
     }
     
-    @objc private func resetButtonTapped() {
-        let alert = UIAlertController(
-            title: "Rotayı Sıfırla",
-            message: "Tüm konum geçmişiniz silinecek. Devam etmek istiyor musunuz?",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "İptal", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Sil", style: .destructive) { _ in
-            // TODO: Add action
-        })
-        present(alert, animated: true)
+    @objc func resetButtonTapped() {
+        viewModel.didResetButtonTap()
+    }
+}
+
+// MARK: - Private Methods
+private extension MapView {
+    
+    func didLocationUpdate(location: LocationModel) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.addMarkerForLocation(location)
+            
+            let camera = GMSCameraPosition.camera(
+                withLatitude: location.coordinate.latitude,
+                longitude: location.coordinate.longitude,
+                zoom: 15.0
+            )
+            self.mapView.animate(to: camera)
+        }
+    }
+    
+    func addMarkerForLocation(_ location: LocationModel) {
+        let marker = GMSMarker()
+        marker.position = location.coordinate
+        marker.map = mapView
+        marker.userData = location
+        markers.append(marker)
+        
+        if markers.count > 1 {
+            let path = GMSMutablePath()
+            markers.forEach { path.add($0.position) }
+            
+            let polyline = GMSPolyline(path: path)
+            polyline.strokeColor = .blue
+            polyline.strokeWidth = 3.0
+            polyline.map = mapView
+        }
+    }
+    
+    func didAuthorizationStatusChange(_ status: CLAuthorizationStatus) {
+        DispatchQueue.main.async {
+            switch status {
+            case .denied, .restricted:
+                // TODO: Show bottomsheet
+                break
+            default:
+                break
+            }
+        }
     }
 }

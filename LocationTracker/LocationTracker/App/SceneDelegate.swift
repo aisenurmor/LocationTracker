@@ -16,7 +16,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         window = UIWindow(windowScene: windowScene)
         
-        let mapView = MapView(viewModel: MapViewModel())
+        let mapView = MapViewBuilder.build()
         
         let navigationController = UINavigationController(rootViewController: mapView)
         window?.rootViewController = navigationController
