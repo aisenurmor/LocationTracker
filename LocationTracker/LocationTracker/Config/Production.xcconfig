@@ -1,0 +1,12 @@
+//
+//  Production.xcconfig
+//  LocationTracker
+//
+//  Created by Aise Nur Mor on 21.03.2025.
+//
+
+// Configuration settings file format documentation can be found at:
+// https://help.apple.com/xcode/#/dev745c5c974
+
+PRODUCT_NAME = Location Tracker
+API_KEY = AIzaSyDfcR9I8Mx1RJo4E3ahVmZGJsnbUk_i2wY
